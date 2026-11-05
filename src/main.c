@@ -37,7 +37,7 @@ void fechar_db(void);
 
 int main(void) {
 
-    if (!iniciar_db("dados/agente.txt", "a+")) {
+    if (!iniciar_db("../dados/agente.txt", "a+")) {
         return 1;
     }
 
