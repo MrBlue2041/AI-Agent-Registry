@@ -205,3 +205,4 @@ void fechar_db(void) {
 
 // Funcoes do agente
 // Implementacao pendente pelos integrantes
+//oi 
