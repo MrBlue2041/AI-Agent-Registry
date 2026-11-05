@@ -68,8 +68,8 @@ void iniciar_sistema(void) {
         printf("                    2 - Sair                      \n");
         printf("                                                  \n");
         printf("==================================================\n");
-        printf(" Desenvolvido por:                                \n");
-        printf(" Juliano, David, Alisson, Luana, Guilherme e Juan \n");
+        printf("                                                  \n");
+        printf("                                                  \n");
         printf("==================================================\n");
         printf("\n");
         printf("Selecione uma opcao: ");
