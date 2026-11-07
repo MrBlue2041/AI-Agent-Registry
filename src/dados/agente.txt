@@ -1,0 +1,3 @@
+1;David;Da o cu quando os caras pede;5
+2;Juliano;Come david;5
+3;sla;sla;4

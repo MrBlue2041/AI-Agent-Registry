@@ -15,12 +15,14 @@ char *categorias[] = {
 };
 
 #define MAX_CATEGORIAS (sizeof(categorias) / sizeof(categorias[0]))
+#define PATH_DADOS "dados/agente.txt"
 
 // Funcoes gerais
 void iniciar_sistema(void);
 void carregar_menu(void);
 void apagar_console(void);
 int ler_opcao(void);
+int validar_scanf(char texto[]);
 
 // Funcoes para o agente
 // OBS: falta implementar
@@ -34,10 +36,11 @@ void excluir_agente(void);
 // Funcoes de armazenamento
 int iniciar_db(char path[], char mode[]);
 void fechar_db(void);
+int contar_linhas();
 
 int main(void) {
 
-    if (!iniciar_db("../dados/agente.txt", "a+")) {
+    if (!iniciar_db(PATH_DADOS, "a+")) {
         return 1;
     }
 
@@ -119,7 +122,8 @@ void carregar_menu(void) {
 
             case 1:
                 apagar_console();
-                //cadastrar_agente();
+                menuOn = 0;
+                cadastrar_agente();
                 break;
 
             case 2:
@@ -182,6 +186,32 @@ void apagar_console(void) {
     }
 }
 
+int validar_scanf(char texto[]){
+    int valido = 1;
+
+    for (int i = 0; texto[i] != '\0'; i++) {
+        if (texto[i] == ';') {
+            valido = 0;
+            break;
+        }
+    }
+    return valido;
+}
+
+//ajustar bug do enter nao funcionar
+void pagina_continuar(){
+    char teclado[1];
+
+    printf("Digite qualquer tecla para continuar...");
+
+    scanf("%s", teclado);
+
+    if(teclado != NULL){
+        apagar_console();
+        carregar_menu();
+    }
+}
+
 // Funcoes de armazenamento
 int iniciar_db(char path[], char mode[]) {
 
@@ -195,6 +225,35 @@ int iniciar_db(char path[], char mode[]) {
     return 1;
 }
 
+int inserir_db(char nome[80], char instrucao[1000], int nota) {
+
+    if (dados == NULL || nome == NULL || instrucao == NULL) {
+        return -1;
+    }
+
+    if (nota < 0 || nota > 5) {
+        return -1;
+    }
+
+    int quantidade = contar_linhas();
+
+    if (quantidade < 0) {
+        return -1;
+    }
+
+    int id = quantidade + 1;
+
+    if (fprintf(dados, "%d;%s;%s;%d\n", id, nome, instrucao, nota) < 0) {
+        return -1;
+    }
+
+    if (fflush(dados) != 0) {
+        return -1;
+    }
+
+    return id;
+}
+
 void fechar_db(void) {
 
     if (dados != NULL) {
@@ -203,7 +262,82 @@ void fechar_db(void) {
     }
 }
 
+int contar_linhas(){
+    char linha[1200];
+    int quantidade = 0;
+
+    rewind(dados);
+
+    while (fgets(linha, sizeof(linha), dados) != NULL) {
+        quantidade++;
+    }
+
+    return quantidade;
+}
+
+
 // Funcoes do agente
+void cadastrar_agente(){
+    char nome[80], instrucao[1000];
+    int nota, sessao = 1, cadastro_ativo = 1;
+
+    do {
+        switch(sessao){
+            case 1: {
+                printf("------CADASTRO DE AGENTE------\n");
+                printf("Por favor insira um nome para seu novo agente:\n");
+                scanf(" %79[^\n]", nome);
+
+                if(!validar_scanf(nome)){
+                    printf("Nao utilize ';' no texto!\n");
+                    sessao = 1;
+                    break;
+                }      
+                sessao++;
+                break;
+            }
+            case 2: {
+                printf("------CADASTRO DE AGENTE------\n");
+                printf("Por favor insira uma instrucao para seu novo agente:\n");
+                scanf(" %999[^\n]", instrucao);
+
+                if(validar_scanf(instrucao) != 1){
+                    printf("Nao utilize ';' no texto!\n");
+                    sessao = 2;
+                    break;
+                }      
+                sessao++;
+                break;
+            }
+            case 3: {
+                printf("------CADASTRO DE AGENTE------\n");
+                printf("Por favor insira uma nota para seu novo agente:\n");
+                nota = ler_opcao();
+
+                if(nota == -1 || nota < 0 || nota > 5){
+                    sessao = 3;
+                    break;
+                }
+
+                if(inserir_db(nome, instrucao, nota) == -1){
+                    sessao = 3;
+                    break;
+                    printf("Infelizmente houve um problema ao fazer o salvamento dos dados.\n");
+                }
+
+                printf("Agente %s inserido com sucesso em nossa base de dados.\n", nome);
+                sessao = 0;
+                break;
+            }
+            default: {
+                sessao = 0;
+                cadastro_ativo = 0;
+                pagina_continuar();
+                break;
+            }
+        }
+ 
+    } while(cadastro_ativo == 1);
+}
+
 // Implementacao pendente pelos integrantes
-//oi 
-// David Gay
