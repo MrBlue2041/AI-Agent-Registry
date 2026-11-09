@@ -15,7 +15,7 @@ char *categorias[] = {
 };
 
 #define MAX_CATEGORIAS (sizeof(categorias) / sizeof(categorias[0]))
-#define PATH_DADOS "dados/agente.txt"
+#define PATH_DADOS "../dados/agente.txt"
 
 // Funcoes gerais
 void iniciar_sistema(void);
@@ -128,17 +128,17 @@ void carregar_menu(void) {
 
             case 2:
                 apagar_console();
-                //buscar_agentes();
+                buscar_agentes();
                 break;
 
             case 3:
                 apagar_console();
-                //buscar_por_id();
+                buscar_por_id();
                 break;
 
             case 4:
                 apagar_console();
-                //buscar_por_nome();
+                buscar_por_nome();
                 break;
 
             case 5:
@@ -340,4 +340,122 @@ void cadastrar_agente(){
     } while(cadastro_ativo == 1);
 }
 
+void buscar_agentes(){
+    char linha[1200];
+    char nome[80], instrucao[1000];
+    int id, nota;
+    int total = 0;
+
+    printf("------AGENTES CADASTRADOS------\n");
+
+    // volta pro comeco do arquivo, senao a leitura pode comecar do final
+    rewind(dados);
+
+    // le o arquivo linha por linha, e para quando o arquivo acabar (NULL)
+    while (fgets(linha, sizeof(linha), dados) != NULL) {
+        // separa a linha em 4 partes: id, nome, instrucao e nota
+        // o %[^;] significa "leia ate achar um ;"
+        sscanf(linha, "%d;%79[^;];%999[^;];%d", &id, nome, instrucao, &nota);
+
+        printf("\nID: %d\n", id);
+        printf("Nome: %s\n", nome);
+        printf("Instrucao: %s\n", instrucao);
+        printf("Nota: %d\n", nota);
+        
+        // soma 1 no contador
+        total++;
+    }
+
+    if (total == 0) {
+        printf("\nNenhum agente cadastrado.\n");
+    }
+}
+
+void buscar_por_id(){
+    char linha[1200];
+    char nome[80], instrucao[1000];
+    int id, nota;
+    int idBusca;
+    int achou = 0;
+
+    printf("------BUSCAR AGENTE POR ID------\n");
+    printf("Digite o ID do agente:\n");
+    idBusca = ler_opcao();
+
+    rewind(dados);
+
+    while (fgets(linha, sizeof(linha), dados) != NULL) {
+        sscanf(linha, "%d;%79[^;];%999[^;];%d", &id, nome, instrucao, &nota);
+
+        
+        if (id == idBusca) {
+            printf("\nID: %d\n", id);
+            printf("Nome: %s\n", nome);
+            printf("Instrucao: %s\n", instrucao);
+            printf("Nota: %d\n", nota);
+            achou = 1;
+        }
+    }
+
+    if (achou == 0) {
+        printf("\nAgente nao encontrado.\n");
+    }
+}
+
+void buscar_por_nome(){
+    char linha[1200];
+    char nome[80], instrucao[1000];
+    // guarda o texto que o usuario digitou para procurar
+    char nomeBusca[80];
+    int id, nota;
+    int achou = 0;
+    // i anda pelas letras do nome do agente
+    // j anda pelas letras do texto digitado
+    int i, j;
+    int encontrou;
+
+    printf("------BUSCAR AGENTE POR NOME------\n");
+    printf("Digite o nome (ou parte dele):\n");
+    scanf(" %79[^\n]", nomeBusca);
+
+    rewind(dados);
+
+    while (fgets(linha, sizeof(linha), dados) != NULL) {
+        sscanf(linha, "%d;%79[^;];%999[^;];%d", &id, nome, instrucao, &nota);
+
+        // zera antes de testar cada agente novo
+        encontrou = 0;
+
+
+        // testa cada posicao do nome como possivel comeco do texto digitado
+        // '\0' marca o fim do texto
+        for (i = 0; nome[i] != '\0'; i++) {
+            j = 0;
+
+            // compara letra por letra, enquanto forem iguais
+            // e o texto digitado nao tiver acabado
+            while (nomeBusca[j] != '\0' && nome[i + j] == nomeBusca[j]) {
+                j++;
+            }
+
+            
+            if (nomeBusca[j] == '\0') {
+                encontrou = 1;
+            }
+        }
+
+        if (encontrou == 1) {
+            printf("\nID: %d\n", id);
+            printf("Nome: %s\n", nome);
+            printf("Instrucao: %s\n", instrucao);
+            printf("Nota: %d\n", nota);
+            // marca que achou pelo menos um
+            achou = 1;
+        }
+    }
+
+    if (achou == 0) {
+        printf("\nNenhum agente encontrado com esse nome.\n");
+    }
+}
 // Implementacao pendente pelos integrantes
