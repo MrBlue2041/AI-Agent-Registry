@@ -2,58 +2,65 @@
 #include <stdio.h>
 #include <conio.h>
 
-FILE *dados;
+#define MAX_AGENTES 50
+#define TAM_NOME 80
+#define TAM_INSTRUCAO 1000
+
+#define PATH_DADOS "dados/agentes.txt"
+
 int sistemaOn = 1;
+
+int ids[MAX_AGENTES];
+char nomes[MAX_AGENTES][TAM_NOME + 1];
+char instrucoes[MAX_AGENTES][TAM_INSTRUCAO + 1];
+int notas[MAX_AGENTES];
+
+int totalAgentes = 0;
+int proximoId = 1;
 
 char *categorias[] = {
     "Cadastrar Agente",
-    "Buscar Agentes",
+    "Listar Agentes",
     "Buscar Agente por ID",
     "Buscar Agente por nome",
-    "Editar Agente",
-    "Excluir Agente",
     "Sair"
 };
 
 #define MAX_CATEGORIAS (sizeof(categorias) / sizeof(categorias[0]))
-#define PATH_DADOS "dados/agente.txt"
 
-// Funcoes gerais
 void iniciar_sistema(void);
 void carregar_menu(void);
 void apagar_console(void);
+void limpar_buffer(void);
 int ler_opcao(void);
+int ler_texto(char destino[], int max);
 int validar_scanf(char texto[]);
+void copiar_texto(char destino[], char origem[]);
 void pagina_continuar();
 
-// Funcoes para o agente
-// OBS: falta implementar
 void cadastrar_agente(void);
 void buscar_agentes(void);
 void buscar_por_id(void);
 void buscar_por_nome(void);
-void editar_agente(void);
-void excluir_agente(void);
+void menu_agente(int pos);
+void exibir_agente(int pos);
+void editar_agente(int pos);
+void excluir_agente(int pos);
+int encontrar_posicao_por_id(int id);
+int nome_contem(int pos, char busca[]);
 
-// Funcoes de armazenamento
-int iniciar_db(char path[], char mode[]);
-void fechar_db(void);
-int contar_linhas();
+void carregar_dados(void);
+int salvar_dados(void);
 
 int main(void) {
 
-    if (!iniciar_db(PATH_DADOS, "a+")) {
-        return 1;
-    }
+    carregar_dados();
 
     iniciar_sistema();
-
-    fechar_db();
 
     return 0;
 }
 
-// Funcoes gerais
 void iniciar_sistema(void) {
 
     int sessao = 0;
@@ -112,7 +119,7 @@ void carregar_menu(void) {
         printf("\n");
         printf("=============== MENU PRINCIPAL ===============\n");
 
-        for (int i = 0; i < MAX_CATEGORIAS; i++) {
+        for (int i = 0; i < (int) MAX_CATEGORIAS; i++) {
             printf("[%d] %s\n", i + 1, categorias[i]);
         }
 
@@ -147,18 +154,6 @@ void carregar_menu(void) {
                 break;
 
             case 5:
-                apagar_console();
-                editar_agente();
-                pagina_continuar();
-                break;
-
-            case 6:
-                apagar_console();
-                excluir_agente();
-                pagina_continuar();
-                break;
-
-            case 7:
                 menuOn = 0;
                 sistemaOn = 0;
                 apagar_console();
@@ -174,16 +169,57 @@ void carregar_menu(void) {
     } while (menuOn == 1);
 }
 
+void limpar_buffer(void) {
+    int c;
+
+    c = getchar();
+
+    while (c != '\n' && c != EOF) {
+        c = getchar();
+    }
+}
+
 int ler_opcao() {
     int opcao;
 
     if (scanf("%d", &opcao) == 1) {
+        limpar_buffer();
         return opcao;
     }
 
-    while (getchar() != '\n');
+    limpar_buffer();
 
     return -1;
+}
+
+int ler_texto(char destino[], int max) {
+    char texto[TAM_INSTRUCAO + 2];
+    int tamanho = 0;
+
+    if (scanf(" %1001[^\n]", texto) != 1) {
+        limpar_buffer();
+        return 0;
+    }
+
+    limpar_buffer();
+
+    while (texto[tamanho] != '\0') {
+        tamanho++;
+    }
+
+    if (tamanho > max) {
+        printf("O texto pode ter no maximo %d caracteres!\n", max);
+        return 0;
+    }
+
+    if (!validar_scanf(texto)) {
+        printf("Nao utilize ';' no texto!\n");
+        return 0;
+    }
+
+    copiar_texto(destino, texto);
+
+    return 1;
 }
 
 void apagar_console(void) {
@@ -205,7 +241,17 @@ int validar_scanf(char texto[]){
     return valido;
 }
 
-//ajustar bug do enter nao funcionar
+void copiar_texto(char destino[], char origem[]) {
+    int i = 0;
+
+    while (origem[i] != '\0') {
+        destino[i] = origem[i];
+        i++;
+    }
+
+    destino[i] = '\0';
+}
+
 void pagina_continuar(){
     printf("Pressione qualquer tecla para continuar...");
 
@@ -214,125 +260,151 @@ void pagina_continuar(){
     apagar_console();
 }
 
-// Funcoes de armazenamento
-int iniciar_db(char path[], char mode[]) {
+void carregar_dados(void) {
+    char linha[1200];
+    char nome[TAM_NOME + 1], instrucao[TAM_INSTRUCAO + 1];
+    int id, nota;
 
-    dados = fopen(path, mode);
+    FILE *arquivo = fopen(PATH_DADOS, "r");
 
-    if (dados == NULL) {
-        printf("ERRO: Nao foi possivel carregar os dados.\n");
+    if (arquivo == NULL) {
+        return;
+    }
+
+    while (totalAgentes < MAX_AGENTES && fgets(linha, sizeof(linha), arquivo) != NULL) {
+
+        if (sscanf(linha, "%d;%80[^;];%1000[^;];%d", &id, nome, instrucao, &nota) == 4) {
+            ids[totalAgentes] = id;
+            copiar_texto(nomes[totalAgentes], nome);
+            copiar_texto(instrucoes[totalAgentes], instrucao);
+            notas[totalAgentes] = nota;
+
+            if (id >= proximoId) {
+                proximoId = id + 1;
+            }
+
+            totalAgentes++;
+        }
+    }
+
+    fclose(arquivo);
+}
+
+int salvar_dados(void) {
+    int i;
+
+    FILE *arquivo = fopen(PATH_DADOS, "w");
+
+    if (arquivo == NULL) {
+        printf("ERRO: Nao foi possivel salvar os dados.\n");
         return 0;
     }
+
+    for (i = 0; i < totalAgentes; i++) {
+        fprintf(arquivo, "%d;%s;%s;%d\n", ids[i], nomes[i], instrucoes[i], notas[i]);
+    }
+
+    fclose(arquivo);
 
     return 1;
 }
 
-int inserir_db(char nome[80], char instrucao[1000], int nota) {
+int encontrar_posicao_por_id(int id) {
+    int i;
 
-    if (dados == NULL || nome == NULL || instrucao == NULL) {
-        return -1;
+    for (i = 0; i < totalAgentes; i++) {
+        if (ids[i] == id) {
+            return i;
+        }
     }
 
-    if (nota < 0 || nota > 5) {
-        return -1;
-    }
-
-    int quantidade = contar_linhas();
-
-    if (quantidade < 0) {
-        return -1;
-    }
-
-    int id = quantidade;
-
-    if (fprintf(dados, "%d;%s;%s;%d\n", id, nome, instrucao, nota) < 0) {
-        return -1;
-    }
-
-    if (fflush(dados) != 0) {
-        return -1;
-    }
-
-    return id;
+    return -1;
 }
 
-void fechar_db(void) {
-
-    if (dados != NULL) {
-        fclose(dados);
-        dados = NULL;
-    }
+void exibir_agente(int pos) {
+    printf("\nID: %d\n", ids[pos]);
+    printf("Nome: %s\n", nomes[pos]);
+    printf("Instrucao: %s\n", instrucoes[pos]);
+    printf("Nota: %d\n", notas[pos]);
 }
 
-int contar_linhas() {
-    int id = 0;
+int nome_contem(int pos, char busca[]) {
+    int i, j;
 
-    FILE *c = fopen("dados/contador.txt", "r");
+    for (i = 0; nomes[pos][i] != '\0'; i++) {
+        j = 0;
 
-    if (c != NULL) {
-        fscanf(c, "%d", &id);
-        fclose(c);
+        while (busca[j] != '\0' && nomes[pos][i + j] == busca[j]) {
+            j++;
+        }
+
+        if (busca[j] == '\0') {
+            return 1;
+        }
     }
 
-    id++;
-
-    c = fopen("dados/contador.txt", "w");
-
-    if (c != NULL) {
-        fprintf(c, "%d", id);
-        fclose(c);
-    }
-
-    return id;
+    return 0;
 }
 
-// Funcoes do agente
 void cadastrar_agente(){
-    char nome[80], instrucao[1000];
+    char nome[TAM_NOME + 1], instrucao[TAM_INSTRUCAO + 1];
     int nota, sessao = 1, cadastro_ativo = 1;
+
+    if (totalAgentes >= MAX_AGENTES) {
+        printf("------CADASTRO DE AGENTE------\n");
+        printf("Limite de %d agentes atingido. Exclua um agente para cadastrar outro.\n", MAX_AGENTES);
+        return;
+    }
 
     do {
         switch(sessao){
             case 1: {
                 printf("------CADASTRO DE AGENTE------\n");
-                printf("Por favor insira um nome para seu novo agente:\n");
-                scanf(" %79[^\n]", nome);
+                printf("Por favor insira um nome para seu novo agente (ate %d caracteres):\n", TAM_NOME);
 
-                if(!validar_scanf(nome)){
-                    printf("Nao utilize ';' no texto!\n");
+                if(!ler_texto(nome, TAM_NOME)){
                     sessao = 1;
                     break;
-                }      
+                }
                 sessao++;
                 break;
             }
             case 2: {
                 printf("------CADASTRO DE AGENTE------\n");
-                printf("Por favor insira uma instrucao para seu novo agente:\n");
-                scanf(" %999[^\n]", instrucao);
+                printf("Por favor insira uma instrucao para seu novo agente (ate %d caracteres):\n", TAM_INSTRUCAO);
+                printf("Lembrete: escreva instrucoes respeitosas, sem conteudo ofensivo ou discriminatorio.\n");
 
-                if(validar_scanf(instrucao) != 1){
-                    printf("Nao utilize ';' no texto!\n");
+                if(!ler_texto(instrucao, TAM_INSTRUCAO)){
                     sessao = 2;
                     break;
-                }      
+                }
                 sessao++;
                 break;
             }
             case 3: {
                 printf("------CADASTRO DE AGENTE------\n");
-                printf("Por favor insira uma nota para seu novo agente:\n");
+                printf("Por favor insira uma nota (0 a 5) para seu novo agente:\n");
                 nota = ler_opcao();
 
-                if(nota == -1 || nota < 0 || nota > 5){
+                if(nota < 0 || nota > 5){
+                    printf("A nota deve ser um numero inteiro entre 0 e 5!\n");
                     sessao = 3;
                     break;
                 }
 
-                if(inserir_db(nome, instrucao, nota) == -1){
-                    sessao = 3;
-                    break;
+                ids[totalAgentes] = proximoId;
+                copiar_texto(nomes[totalAgentes], nome);
+                copiar_texto(instrucoes[totalAgentes], instrucao);
+                notas[totalAgentes] = nota;
+                totalAgentes++;
+                proximoId++;
+
+                if(!salvar_dados()){
+                    totalAgentes--;
+                    proximoId--;
                     printf("Infelizmente houve um problema ao fazer o salvamento dos dados.\n");
+                    sessao = 0;
+                    break;
                 }
 
                 printf("Agente %s inserido com sucesso em nossa base de dados.\n", nome);
@@ -342,258 +414,204 @@ void cadastrar_agente(){
             default: {
                 sessao = 0;
                 cadastro_ativo = 0;
-                pagina_continuar();
                 break;
             }
         }
- 
+
     } while(cadastro_ativo == 1);
 }
 
 void buscar_agentes(){
-    char linha[1200];
-    char nome[80], instrucao[1000];
-    int id, nota;
-    int total = 0;
+    int ordem[MAX_AGENTES];
+    int i, j, aux, opcao;
 
     printf("------AGENTES CADASTRADOS------\n");
 
-    // volta pro comeco do arquivo, senao a leitura pode comecar do final
-    rewind(dados);
-
-    // le o arquivo linha por linha, e para quando o arquivo acabar (NULL)
-    while (fgets(linha, sizeof(linha), dados) != NULL) {
-        // separa a linha em 4 partes: id, nome, instrucao e nota
-        // o %[^;] significa "leia ate achar um ;"
-        sscanf(linha, "%d;%79[^;];%999[^;];%d", &id, nome, instrucao, &nota);
-
-        printf("\nID: %d\n", id);
-        printf("Nome: %s\n", nome);
-        printf("Instrucao: %s\n", instrucao);
-        printf("Nota: %d\n", nota);
-        
-        // soma 1 no contador
-        total++;
-    }
-
-    if (total == 0) {
+    if (totalAgentes == 0) {
         printf("\nNenhum agente cadastrado.\n");
+        return;
     }
+
+    printf("[1] Listar por ID\n");
+    printf("[2] Listar por nota (da maior para a menor)\n");
+    printf("Digite a opcao desejada: ");
+    opcao = ler_opcao();
+
+    for (i = 0; i < totalAgentes; i++) {
+        ordem[i] = i;
+    }
+
+    if (opcao == 2) {
+        for (i = 0; i < totalAgentes - 1; i++) {
+            for (j = 0; j < totalAgentes - 1 - i; j++) {
+                if (notas[ordem[j]] < notas[ordem[j + 1]]) {
+                    aux = ordem[j];
+                    ordem[j] = ordem[j + 1];
+                    ordem[j + 1] = aux;
+                }
+            }
+        }
+    }
+
+    for (i = 0; i < totalAgentes; i++) {
+        exibir_agente(ordem[i]);
+    }
+
+    printf("\nTotal de agentes: %d de %d\n", totalAgentes, MAX_AGENTES);
 }
 
 void buscar_por_id(){
-    char linha[1200];
-    char nome[80], instrucao[1000];
-    int id, nota;
-    int idBusca;
-    int achou = 0;
+    int idBusca, pos;
 
     printf("------BUSCAR AGENTE POR ID------\n");
     printf("Digite o ID do agente:\n");
     idBusca = ler_opcao();
 
-    rewind(dados);
+    pos = encontrar_posicao_por_id(idBusca);
 
-    while (fgets(linha, sizeof(linha), dados) != NULL) {
-        sscanf(linha, "%d;%79[^;];%999[^;];%d", &id, nome, instrucao, &nota);
-
-        
-        if (id == idBusca) {
-            printf("\nID: %d\n", id);
-            printf("Nome: %s\n", nome);
-            printf("Instrucao: %s\n", instrucao);
-            printf("Nota: %d\n", nota);
-            achou = 1;
-        }
-    }
-
-    if (achou == 0) {
+    if (pos == -1) {
         printf("\nAgente nao encontrado.\n");
+        return;
     }
+
+    menu_agente(pos);
 }
 
 void buscar_por_nome(){
-    char linha[1200];
-    char nome[80], instrucao[1000];
-    // guarda o texto que o usuario digitou para procurar
-    char nomeBusca[80];
-    int id, nota;
+    char nomeBusca[TAM_NOME + 1];
+    int i, pos, idEscolhido;
     int achou = 0;
-    // i anda pelas letras do nome do agente
-    // j anda pelas letras do texto digitado
-    int i, j;
-    int encontrou;
 
     printf("------BUSCAR AGENTE POR NOME------\n");
     printf("Digite o nome (ou parte dele):\n");
-    scanf(" %79[^\n]", nomeBusca);
 
-    rewind(dados);
+    if (!ler_texto(nomeBusca, TAM_NOME)) {
+        return;
+    }
 
-    while (fgets(linha, sizeof(linha), dados) != NULL) {
-        sscanf(linha, "%d;%79[^;];%999[^;];%d", &id, nome, instrucao, &nota);
-
-        // zera antes de testar cada agente novo
-        encontrou = 0;
-
-
-        // testa cada posicao do nome como possivel comeco do texto digitado
-        // '\0' marca o fim do texto
-        for (i = 0; nome[i] != '\0'; i++) {
-            j = 0;
-
-            // compara letra por letra, enquanto forem iguais
-            // e o texto digitado nao tiver acabado
-            while (nomeBusca[j] != '\0' && nome[i + j] == nomeBusca[j]) {
-                j++;
-            }
-
-            
-            if (nomeBusca[j] == '\0') {
-                encontrou = 1;
-            }
-        }
-
-        if (encontrou == 1) {
-            printf("\nID: %d\n", id);
-            printf("Nome: %s\n", nome);
-            printf("Instrucao: %s\n", instrucao);
-            printf("Nota: %d\n", nota);
-            // marca que achou pelo menos um
-            achou = 1;
+    for (i = 0; i < totalAgentes; i++) {
+        if (nome_contem(i, nomeBusca)) {
+            exibir_agente(i);
+            achou++;
         }
     }
 
     if (achou == 0) {
         printf("\nNenhum agente encontrado com esse nome.\n");
+        return;
+    }
+
+    printf("\nDigite o ID do agente para editar ou excluir (0 para voltar): ");
+    idEscolhido = ler_opcao();
+
+    if (idEscolhido == 0) {
+        return;
+    }
+
+    pos = encontrar_posicao_por_id(idEscolhido);
+
+    if (pos == -1 || !nome_contem(pos, nomeBusca)) {
+        printf("\nID invalido para essa busca.\n");
+        return;
+    }
+
+    menu_agente(pos);
+}
+
+void menu_agente(int pos) {
+    int opcao;
+    int ativo = 1;
+
+    do {
+        exibir_agente(pos);
+
+        printf("\n[1] Editar\n");
+        printf("[2] Excluir\n");
+        printf("[3] Voltar ao menu anterior\n");
+        printf("Digite a opcao desejada: ");
+
+        opcao = ler_opcao();
+
+        switch (opcao) {
+
+            case 1:
+                editar_agente(pos);
+                break;
+
+            case 2:
+                excluir_agente(pos);
+                ativo = 0;
+                break;
+
+            case 3:
+                ativo = 0;
+                break;
+
+            default:
+                printf("Opcao invalida!\n");
+                break;
+        }
+
+    } while (ativo == 1);
+}
+
+void editar_agente(int pos) {
+    char novoNome[TAM_NOME + 1], novaInstrucao[TAM_INSTRUCAO + 1];
+    int novaNota;
+
+    printf("\n------EDITAR AGENTE------\n");
+
+    do {
+        printf("Digite o novo nome (ate %d caracteres):\n", TAM_NOME);
+    } while (!ler_texto(novoNome, TAM_NOME));
+
+    do {
+        printf("Digite a nova instrucao (ate %d caracteres):\n", TAM_INSTRUCAO);
+    } while (!ler_texto(novaInstrucao, TAM_INSTRUCAO));
+
+    do {
+        printf("Digite a nova nota (0 a 5):\n");
+        novaNota = ler_opcao();
+
+        if (novaNota < 0 || novaNota > 5) {
+            printf("A nota deve ser um numero inteiro entre 0 e 5!\n");
+        }
+    } while (novaNota < 0 || novaNota > 5);
+
+    copiar_texto(nomes[pos], novoNome);
+    copiar_texto(instrucoes[pos], novaInstrucao);
+    notas[pos] = novaNota;
+
+    if (salvar_dados()) {
+        printf("\nAgente editado com sucesso!\n");
     }
 }
 
-void editar_agente() {
-    char linha[1200];
-    char nome[80], instrucao[1000];
-    char novoNome[80], novaInstrucao[1000];
-    int id, nota, novaNota;
-    int idBusca, achou = 0;
+void excluir_agente(int pos) {
+    int i, confirmar;
 
-    FILE *temp = fopen("dados/temp.txt", "w");
+    printf("\n------EXCLUIR AGENTE------\n");
+    printf("Tem certeza que deseja excluir o agente %s?\n", nomes[pos]);
+    printf("[1] Sim\n");
+    printf("[2] Nao\n");
 
-    printf("------EDITAR AGENTE------\n");
-    printf("Digite o ID do agente que deseja editar:\n");
+    confirmar = ler_opcao();
 
-    idBusca = ler_opcao();
-
-    if (idBusca < 1 || temp == NULL) {
-        printf("ID invalido ou erro ao abrir arquivo.\n");
-        if (temp != NULL) fclose(temp);
+    if (confirmar != 1) {
+        printf("\nExclusao cancelada.\n");
         return;
     }
 
-    rewind(dados);
-
-    while (fgets(linha, sizeof(linha), dados) != NULL) {
-        sscanf(linha, "%d;%79[^;];%999[^;];%d", &id, nome, instrucao, &nota);
-
-        if (id == idBusca) {
-            achou = 1;
-            break;
-        }
+    for (i = pos; i < totalAgentes - 1; i++) {
+        ids[i] = ids[i + 1];
+        copiar_texto(nomes[i], nomes[i + 1]);
+        copiar_texto(instrucoes[i], instrucoes[i + 1]);
+        notas[i] = notas[i + 1];
     }
 
-    if (achou == 0) {
-        fclose(temp);
-        remove("dados/temp.txt");
-        printf("\nAgente nao encontrado.\n");
-        return;
-    }
+    totalAgentes--;
 
-    printf("Digite o novo nome:\n");
-    scanf(" %79[^\n]", novoNome);
-
-    printf("Digite a nova instrucao:\n");
-    scanf(" %999[^\n]", novaInstrucao);
-
-    printf("Digite a nova nota (0 a 5):\n");
-    novaNota = ler_opcao();
-
-    if (novaNota < 0 || novaNota > 5 ||
-        !validar_scanf(novoNome) ||
-        !validar_scanf(novaInstrucao)) {
-        fclose(temp);
-        remove("dados/temp.txt");
-        printf("\nDados invalidos.\n");
-        return;
-    }
-
-    rewind(dados);
-
-    while (fgets(linha, sizeof(linha), dados) != NULL) {
-        sscanf(linha, "%d;%79[^;];%999[^;];%d", &id, nome, instrucao, &nota);
-
-        if (id == idBusca) {
-            fprintf(temp, "%d;%s;%s;%d\n", id, novoNome, novaInstrucao, novaNota);
-        } else {
-            fprintf(temp, "%s", linha);
-        }
-    }
-
-    fclose(temp);
-    fclose(dados);
-
-    remove(PATH_DADOS);
-    rename("dados/temp.txt", PATH_DADOS);
-
-    dados = fopen(PATH_DADOS, "a+");
-
-    printf("\nAgente editado com sucesso!\n");
-}
-
-void excluir_agente() {
-    char linha[1200];
-    int id, idExcluir;
-    int achou = 0;
-
-    FILE *temp = fopen("dados/temp.txt", "w");
-
-    printf("------EXCLUIR AGENTE------\n");
-    printf("Digite o ID do agente que deseja excluir:\n");
-
-    idExcluir = ler_opcao();
-
-    if (idExcluir < 1 || temp == NULL) {
-        printf("ID invalido ou erro ao abrir arquivo.\n");
-        fclose(temp);
-        return;
-    }
-
-    rewind(dados);
-
-    while (fgets(linha, sizeof(linha), dados) != NULL) {
-
-        sscanf(linha, "%d;", &id);
-
-        if (id != idExcluir) {
-            fprintf(temp, "%s", linha);
-        } else {
-            achou = 1;
-        }
-    }
-
-    fclose(temp);
-
-    if (achou == 1) {
-        fclose(dados);
-
-        remove(PATH_DADOS);
-        rename("dados/temp.txt", PATH_DADOS);
-
-        dados = fopen(PATH_DADOS, "a+");
-
+    if (salvar_dados()) {
         printf("\nAgente excluido com sucesso!\n");
-    } else {
-        remove("dados/temp.txt");
-        printf("\nAgente nao encontrado.\n");
     }
 }
-
-// Implementacao pendente pelos integrantes
