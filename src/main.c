@@ -148,7 +148,8 @@ void carregar_menu(void) {
 
             case 5:
                 apagar_console();
-                //editar_agente();
+                editar_agente();
+                pagina_continuar();
                 break;
 
             case 6:
@@ -466,6 +467,85 @@ void buscar_por_nome(){
     if (achou == 0) {
         printf("\nNenhum agente encontrado com esse nome.\n");
     }
+}
+
+void editar_agente() {
+    char linha[1200];
+    char nome[80], instrucao[1000];
+    char novoNome[80], novaInstrucao[1000];
+    int id, nota, novaNota;
+    int idBusca, achou = 0;
+
+    FILE *temp = fopen("dados/temp.txt", "w");
+
+    printf("------EDITAR AGENTE------\n");
+    printf("Digite o ID do agente que deseja editar:\n");
+
+    idBusca = ler_opcao();
+
+    if (idBusca < 1 || temp == NULL) {
+        printf("ID invalido ou erro ao abrir arquivo.\n");
+        if (temp != NULL) fclose(temp);
+        return;
+    }
+
+    rewind(dados);
+
+    while (fgets(linha, sizeof(linha), dados) != NULL) {
+        sscanf(linha, "%d;%79[^;];%999[^;];%d", &id, nome, instrucao, &nota);
+
+        if (id == idBusca) {
+            achou = 1;
+            break;
+        }
+    }
+
+    if (achou == 0) {
+        fclose(temp);
+        remove("dados/temp.txt");
+        printf("\nAgente nao encontrado.\n");
+        return;
+    }
+
+    printf("Digite o novo nome:\n");
+    scanf(" %79[^\n]", novoNome);
+
+    printf("Digite a nova instrucao:\n");
+    scanf(" %999[^\n]", novaInstrucao);
+
+    printf("Digite a nova nota (0 a 5):\n");
+    novaNota = ler_opcao();
+
+    if (novaNota < 0 || novaNota > 5 ||
+        !validar_scanf(novoNome) ||
+        !validar_scanf(novaInstrucao)) {
+        fclose(temp);
+        remove("dados/temp.txt");
+        printf("\nDados invalidos.\n");
+        return;
+    }
+
+    rewind(dados);
+
+    while (fgets(linha, sizeof(linha), dados) != NULL) {
+        sscanf(linha, "%d;%79[^;];%999[^;];%d", &id, nome, instrucao, &nota);
+
+        if (id == idBusca) {
+            fprintf(temp, "%d;%s;%s;%d\n", id, novoNome, novaInstrucao, novaNota);
+        } else {
+            fprintf(temp, "%s", linha);
+        }
+    }
+
+    fclose(temp);
+    fclose(dados);
+
+    remove(PATH_DADOS);
+    rename("dados/temp.txt", PATH_DADOS);
+
+    dados = fopen(PATH_DADOS, "a+");
+
+    printf("\nAgente editado com sucesso!\n");
 }
 
 void excluir_agente() {
