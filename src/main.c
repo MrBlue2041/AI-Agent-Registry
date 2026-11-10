@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <conio.h>
 
 FILE *dados;
 int sistemaOn = 1;
@@ -15,7 +16,7 @@ char *categorias[] = {
 };
 
 #define MAX_CATEGORIAS (sizeof(categorias) / sizeof(categorias[0]))
-#define PATH_DADOS "../dados/agente.txt"
+#define PATH_DADOS "dados/agente.txt"
 
 // Funcoes gerais
 void iniciar_sistema(void);
@@ -23,6 +24,7 @@ void carregar_menu(void);
 void apagar_console(void);
 int ler_opcao(void);
 int validar_scanf(char texto[]);
+void pagina_continuar();
 
 // Funcoes para o agente
 // OBS: falta implementar
@@ -122,23 +124,26 @@ void carregar_menu(void) {
 
             case 1:
                 apagar_console();
-                menuOn = 0;
                 cadastrar_agente();
+                pagina_continuar();
                 break;
 
             case 2:
                 apagar_console();
                 buscar_agentes();
+                pagina_continuar();
                 break;
 
             case 3:
                 apagar_console();
                 buscar_por_id();
+                pagina_continuar();
                 break;
 
             case 4:
                 apagar_console();
                 buscar_por_nome();
+                pagina_continuar();
                 break;
 
             case 5:
@@ -148,13 +153,14 @@ void carregar_menu(void) {
 
             case 6:
                 apagar_console();
-                //excluir_agente();
+                excluir_agente();
+                pagina_continuar();
                 break;
 
             case 7:
-                apagar_console();
                 menuOn = 0;
                 sistemaOn = 0;
+                apagar_console();
                 printf("Voce foi desconectado do programa.\n");
                 break;
 
@@ -200,16 +206,11 @@ int validar_scanf(char texto[]){
 
 //ajustar bug do enter nao funcionar
 void pagina_continuar(){
-    char teclado[1];
+    printf("Pressione qualquer tecla para continuar...");
 
-    printf("Digite qualquer tecla para continuar...");
+    _getch();
 
-    scanf("%s", teclado);
-
-    if(teclado != NULL){
-        apagar_console();
-        carregar_menu();
-    }
+    apagar_console();
 }
 
 // Funcoes de armazenamento
@@ -241,7 +242,7 @@ int inserir_db(char nome[80], char instrucao[1000], int nota) {
         return -1;
     }
 
-    int id = quantidade + 1;
+    int id = quantidade;
 
     if (fprintf(dados, "%d;%s;%s;%d\n", id, nome, instrucao, nota) < 0) {
         return -1;
@@ -262,19 +263,27 @@ void fechar_db(void) {
     }
 }
 
-int contar_linhas(){
-    char linha[1200];
-    int quantidade = 0;
+int contar_linhas() {
+    int id = 0;
 
-    rewind(dados);
+    FILE *c = fopen("dados/contador.txt", "r");
 
-    while (fgets(linha, sizeof(linha), dados) != NULL) {
-        quantidade++;
+    if (c != NULL) {
+        fscanf(c, "%d", &id);
+        fclose(c);
     }
 
-    return quantidade;
-}
+    id++;
 
+    c = fopen("dados/contador.txt", "w");
+
+    if (c != NULL) {
+        fprintf(c, "%d", id);
+        fclose(c);
+    }
+
+    return id;
+}
 
 // Funcoes do agente
 void cadastrar_agente(){
@@ -458,4 +467,53 @@ void buscar_por_nome(){
         printf("\nNenhum agente encontrado com esse nome.\n");
     }
 }
+
+void excluir_agente() {
+    char linha[1200];
+    int id, idExcluir;
+    int achou = 0;
+
+    FILE *temp = fopen("dados/temp.txt", "w");
+
+    printf("------EXCLUIR AGENTE------\n");
+    printf("Digite o ID do agente que deseja excluir:\n");
+
+    idExcluir = ler_opcao();
+
+    if (idExcluir < 1 || temp == NULL) {
+        printf("ID invalido ou erro ao abrir arquivo.\n");
+        fclose(temp);
+        return;
+    }
+
+    rewind(dados);
+
+    while (fgets(linha, sizeof(linha), dados) != NULL) {
+
+        sscanf(linha, "%d;", &id);
+
+        if (id != idExcluir) {
+            fprintf(temp, "%s", linha);
+        } else {
+            achou = 1;
+        }
+    }
+
+    fclose(temp);
+
+    if (achou == 1) {
+        fclose(dados);
+
+        remove(PATH_DADOS);
+        rename("dados/temp.txt", PATH_DADOS);
+
+        dados = fopen(PATH_DADOS, "a+");
+
+        printf("\nAgente excluido com sucesso!\n");
+    } else {
+        remove("dados/temp.txt");
+        printf("\nAgente nao encontrado.\n");
+    }
+}
+
 // Implementacao pendente pelos integrantes
