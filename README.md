@@ -1,48 +1,62 @@
 # Registro de Agentes de IA
 
-Projeto desenvolvido em linguagem C para cadastrar e organizar agentes de Inteligência Artificial. O sistema permite armazenar informações sobre cada agente, consultar os registros e manter os dados salvos em um arquivo de texto.
+Projeto desenvolvido em linguagem C para o cadastro e gerenciamento de agentes de Inteligência Artificial.
+
+O sistema permite cadastrar agentes, consultar os registros e armazenar suas informações em um arquivo de texto, mantendo os dados salvos mesmo após o encerramento do programa.
 
 ## Funcionalidades
 
-- Cadastrar agentes de IA;
-- Listar os agentes cadastrados;
-- Buscar agentes pelo ID;
-- Buscar agentes pelo nome;
-- Armazenar nome, instruções e nota de cada agente;
-- Salvar os dados em arquivo para que permaneçam disponíveis ao iniciar o programa novamente.
+- Cadastro de agentes;
+- Listagem dos agentes cadastrados;
+- Busca por ID;
+- Busca por nome;
+- Armazenamento de nome, instruções e nota;
+- Salvamento dos dados em arquivo de texto.
 
 ## Tecnologias utilizadas
 
 - Linguagem C;
-- Manipulação de arquivos (`fopen`, `fgets`, `fprintf` e `fclose`);
-- Arrays e funções;
-- Arquivo de texto para armazenamento dos dados.
+- Arrays;
+- Funções;
+- Manipulação de arquivos.
+
+## Estrutura do projeto
+
+```text
+AI-Agent-Registry/
+└── src/
+    ├── dados/
+    │   └── agentes.txt
+    └── main.c
+```
 
 ## Como executar
 
-É necessário ter um compilador C instalado, como o GCC.
+É necessário ter um compilador C, como o GCC, instalado.
 
-No terminal, dentro da pasta do projeto, execute:
+Entre na pasta `src`:
+
+```bash
+cd src
+```
+
+Compile o programa:
 
 ```bash
 gcc main.c -o registro-agentes
 ```
 
-Depois, execute o programa:
+Execute:
 
+**Linux:**
 ```bash
 ./registro-agentes
 ```
 
-No Windows, pode ser utilizado:
-
+**Windows:**
 ```bash
 registro-agentes.exe
 ```
-
-## Armazenamento
-
-Os registros são armazenados no arquivo `dados/agentes.txt`. Dessa forma, as informações cadastradas não são perdidas quando o programa é encerrado.
 
 ## Integrantes
 
@@ -52,3 +66,10 @@ Os registros são armazenados no arquivo `dados/agentes.txt`. Dessa forma, as in
 - Luana
 - Guilherme
 - Juan
+
+## Instituição
+
+Universidade Paulista (UNIP)  
+Curso: Análise e Desenvolvimento de Sistemas
+
+Projeto desenvolvido como atividade acadêmica do curso.
