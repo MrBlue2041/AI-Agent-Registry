@@ -1,8 +1,5 @@
-1;David;Da o cu quando os caras pede;5
-2;Juliano;Come david;5
-3;sla;sla;4
-5;David chupa pinto;chupar pintos;5
-5;david petista;votar no lula;5
-6;alisson petista;mamar no PT;1
-7;alisson gay;ser gay;1
-8;1;1;1
+1;Norte - Orientador de Estudos;Identifique as dificuldades do estudante, organize os conteudos por prioridade e proponha um plano de revisao compativel com o tempo disponivel.;5
+2;BugHunter - Investigador de Erros;Analise o erro e o trecho de codigo informado, levante causas provaveis e sugira testes para verificar cada hipotese antes de propor uma correcao.;5
+3;Faisca - Explorador de Ideias;Desenvolva alternativas a partir de uma ideia inicial e compare cada proposta considerando viabilidade, publico-alvo e funcionalidades essenciais.;4
+4;Atlas - Curador de Conhecimento;Organize anotacoes em topicos hierarquicos, destaque os conceitos principais e elabore perguntas para revisar o conteudo.;4
+5;Lapida - Revisor de Textos;Revise textos em portugues, identifique problemas de gramatica e clareza e sugira ajustes preservando o sentido e o estilo do autor.;3
